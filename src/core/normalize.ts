@@ -50,7 +50,7 @@ const HOMOGLYPH_MAP: Record<string, string> = {
   '\u0420': 'r', // Р → r
   '\u0422': 't', // Т → t
   '\u0425': 'x', // Х → x
-  '\u0443': 'y', // У → y
+  '\u0423': 'y', // У → y
 
   // Greek → Latin
   '\u03B1': 'a', // α → a

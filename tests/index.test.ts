@@ -3,13 +3,24 @@
  * Run: vitest run  |  vitest --coverage
  */
 
-import { toSkeleton } from '../src/core/normalize.js';
-import { containsProfanity } from '../src/core/profanity.js';
-import { containsSpam } from '../src/core/spam.js';
-import { isGibberish, hasRepeatingChars } from '../src/core/gibberish.js';
-import { hasExcessiveSymbols, hasLowAlphabetRatio, isLowEffortExact } from '../src/core/structure.js';
-import { createValidator } from '../src/validators/builder.js';
-import { validateUsername, validateBio, validateShortText, validateSearchQuery } from '../src/validators/presets.js';
+import {
+  toSkeleton,
+  containsProfanity,
+  getMatchedProfanityPattern,
+  containsSpam,
+  isGibberish,
+  hasRepeatingChars,
+  hasExcessiveSymbols,
+  hasLowAlphabetRatio,
+  hasRepeatedContentWords,
+  isLowEffortExact,
+  createValidator,
+  validateUsername,
+  validateBio,
+  validateShortText,
+  validateLongText,
+  validateSearchQuery
+} from '../src/index.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STAGE 1: Normalization pipeline
@@ -109,6 +120,15 @@ describe('containsProfanity', () => {
       expect(containsProfanity('Hello, how are you today?')).toBe(false);
     });
   });
+
+  describe('getMatchedProfanityPattern', () => {
+    it('returns pattern on match', () => {
+      expect(getMatchedProfanityPattern('fuck')).not.toBeNull();
+    });
+    it('returns null on clean text', () => {
+      expect(getMatchedProfanityPattern('classic')).toBeNull();
+    });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -153,6 +173,12 @@ describe('isGibberish — sensitivity scale', () => {
     it('catches shorter mash', () => expect(isGibberish('bcdfgh', 'strict')).toBe(true));
     it('catches low vowel ratio words', () => expect(isGibberish('trnsfrmtn', 'strict')).toBe(true));
   });
+
+  describe('edge cases', () => {
+    it('catches very long word > 25 chars', () => expect(isGibberish('abcdefghijklmnopqrstuvwxyz', 'loose')).toBe(true));
+    it('catches words with no vowels but long enough', () => expect(isGibberish('xwrtyp', 'strict')).toBe(true));
+    it('catches loose vowel ratio', () => expect(isGibberish('a'.repeat(1) + 'b'.repeat(15), 'loose')).toBe(true));
+  });
 });
 
 describe('hasRepeatingChars', () => {
@@ -187,6 +213,13 @@ describe('structural checks', () => {
   it('isLowEffortExact — flags "asdf"', () => expect(isLowEffortExact('asdf')).toBe(true));
   it('isLowEffortExact — does NOT flag "testing software"', () => {
     expect(isLowEffortExact('testing software')).toBe(false);
+  });
+
+  it('hasRepeatedContentWords — flags repeated words', () => {
+    expect(hasRepeatedContentWords('cats cats dogs dogs')).toBe(true);
+  });
+  it('hasRepeatedContentWords — passes unrepeated words', () => {
+    expect(hasRepeatedContentWords('the quick brown fox')).toBe(false);
   });
 });
 
