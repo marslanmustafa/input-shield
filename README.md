@@ -1,7 +1,6 @@
 # @marslanmustafa/input-shield
 
 [![npm version](https://img.shields.io/npm/v/@marslanmustafa/input-shield.svg)](https://www.npmjs.com/package/@marslanmustafa/input-shield)
-[![bundle size](https://img.shields.io/bundlephobia/minzip/@marslanmustafa/input-shield)](https://bundlephobia.com/package/@marslanmustafa/input-shield)
 [![test coverage](https://img.shields.io/codecov/c/github/marslanmustafa/input-shield)](https://codecov.io/gh/marslanmustafa/input-shield)
 [![license](https://img.shields.io/npm/l/@marslanmustafa/input-shield)](LICENSE)
 [![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
