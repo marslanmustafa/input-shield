@@ -120,5 +120,5 @@ export function isGibberish(
  * Runs on skeleton so leet chars are already resolved.
  */
 export function hasRepeatingChars(text: string): boolean {
-  return /(.)\1{4,}/.test(toSkeleton(text));
+  return /(.)\1{3,}/.test(toSkeleton(text));
 }

@@ -108,6 +108,7 @@ describe('containsProfanity', () => {
     it('catches fuuuuck (stretching)', () => expect(containsProfanity('fuuuuck')).toBe(true));
     it('catches Cyrillic homoglyph аss', () => expect(containsProfanity('\u0430ss')).toBe(true));
     it('catches fullwidth ｆｕｃｋ', () => expect(containsProfanity('ｆｕｃｋ')).toBe(true));
+    it('catches number evasions like fuck12121', () => expect(containsProfanity('fuck12121')).toBe(true));
   });
 
   describe('false positive prevention', () => {
@@ -183,8 +184,9 @@ describe('isGibberish — sensitivity scale', () => {
 
 describe('hasRepeatingChars', () => {
   it('catches 5+ same chars', () => expect(hasRepeatingChars('aaaaaaa')).toBe(true));
-  it('catches leet-evaded repeats: 11111', () => expect(hasRepeatingChars('11111')).toBe(true));
-  it('does NOT flag "aaaa" (4 is ok)', () => expect(hasRepeatingChars('aaaa')).toBe(false));
+  it('catches 4 same chars (e.g. cccc)', () => expect(hasRepeatingChars('cccc')).toBe(true));
+  it('catches leet-evaded repeats: 1111', () => expect(hasRepeatingChars('1111')).toBe(true));
+  it('does NOT flag "aaa" (3 is ok)', () => expect(hasRepeatingChars('aaa')).toBe(false));
   it('does NOT flag normal text', () => expect(hasRepeatingChars('hello world')).toBe(false));
 });
 

@@ -5,62 +5,135 @@
 [![license](https://img.shields.io/npm/l/@marslanmustafa/input-shield)](LICENSE)
 [![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
 
-> **One install. No config. Clean inputs.**
->
-> Profanity · Spam · Gibberish · Leet-speak · Homoglyphs — all in one zero-dependency TypeScript package.
+> One install. No config. Clean inputs.  
+> Profanity, spam, gibberish, and homoglyph detection in a single TypeScript-native zero-dependency package.
 
 ---
 
-## Why @marslanmustafa/input-shield?
+## Why input-shield?
 
-| Problem | Old way (3+ packages) | @marslanmustafa/input-shield |
-|---|---|---|
-| Block profanity | `npm i obscenity` | ✅ built in |
-| Catch `f.u.c.k` / `f@ck` / `ｆｕｃｋ` | Manual regex + leet map | ✅ 3-stage normalization |
-| Catch Cyrillic `аss` (homoglyph bypass) | Nobody does this | ✅ NFKC + homoglyph map |
-| Block spam URLs | `npm i validator` | ✅ built in |
-| Detect keyboard mash | Hand-rolled heuristics | ✅ `loose/normal/strict` scale |
-| Zod integration | 20 lines of glue code | ✅ `import from '@marslanmustafa/input-shield/zod'` |
-| TypeScript types | Often partial | ✅ first-class, discriminated union |
-| Tree-shakeable | Rarely | ✅ every function importable alone |
+Most profanity filters use a simple word list. They miss:
 
----
+- **Leet-speak**: `Fr33 m0ney` → normalized → `free money` → caught
+- **Homoglyph attacks**: Greek `о` instead of English `o` → normalized → caught
+- **Unicode evasion**: `ｆｕｃｋ` (fullwidth) → normalized → caught
+- **Split-tag HTML**: `<b>f</b>uck` → stripped → normalized → caught
+- **Gibberish**: `asdfghjkl` passes every regex filter — not this one
 
-## Install
+input-shield runs a **full normalization pipeline** before any check, so evasion techniques don't work.
 
-```bash
-npm install @marslanmustafa/@marslanmustafa/input-shield
-pnpm add @marslanmustafa/@marslanmustafa/input-shield
-yarn add @marslanmustafa/@marslanmustafa/input-shield
+```
+Raw Input
+   ↓
+Normalization  (leet-speak, homoglyphs, unicode, fullwidth)
+   ↓
+Skeleton       (removes repeated chars, punctuation tricks)
+   ↓
+Security Checks (profanity → spam → gibberish → structure)
+   ↓
+ValidationResult { isValid, reason, message }
 ```
 
 ---
 
-## Quick start
+## Installation
 
-```typescript
+```bash
+# npm
+npm install @marslanmustafa/input-shield
+
+# pnpm
+pnpm add @marslanmustafa/input-shield
+
+# yarn
+yarn add @marslanmustafa/input-shield
+
+# bun
+bun add @marslanmustafa/input-shield
+```
+
+> **Node.js >= 18** required. Zero runtime dependencies.
+
+---
+
+## Quick Start
+
+```ts
 import { createValidator } from '@marslanmustafa/input-shield';
 
-const usernameValidator = createValidator()
+const validator = createValidator()
   .field('Username')
-  .min(3).max(30)
+  .min(3)
+  .max(30)
   .noProfanity()
-  .noGibberish({ sensitivity: 'strict' })
-  .noSpam();
+  .noGibberish();
 
-const result = usernameValidator.validate(userInput);
+const result = validator.validate('asdfghjkl');
 
 if (!result.isValid) {
-  console.log(result.reason);   // 'profanity' | 'gibberish' | 'spam' | ...
-  console.log(result.message);  // "Username: contains inappropriate language."
+  console.log(result.message); // "Username appears to be gibberish."
+  console.log(result.reason);  // "GIBBERISH"
 }
 ```
 
 ---
 
-## Presets (zero-config)
+## Fluent API
 
-```typescript
+Chain as many rules as you need. Every method returns `this` so chains are fully composable.
+
+```ts
+import { createValidator } from '@marslanmustafa/input-shield';
+
+// Username
+const username = createValidator()
+  .field('Username')
+  .min(3)
+  .max(30)
+  .noProfanity()
+  .noGibberish({ sensitivity: 'strict' });
+
+// Bio
+const bio = createValidator()
+  .field('Bio')
+  .min(10)
+  .max(300)
+  .noProfanity()
+  .noSpam()
+  .noGibberish();
+
+// Search query
+const search = createValidator()
+  .field('Search')
+  .min(1)
+  .max(100)
+  .noSpam();
+
+// Validate
+const result = bio.validate('Buy cheap pills now!!! Click here!!!');
+// { isValid: false, reason: 'SPAM', message: 'Bio appears to contain spam.' }
+```
+
+### Available chain methods
+
+| Method | Description |
+|---|---|
+| `.field(name)` | Sets the field name used in error messages |
+| `.min(n)` | Minimum character length |
+| `.max(n)` | Maximum character length |
+| `.noProfanity()` | Detects profanity including leet-speak and homoglyphs |
+| `.noSpam()` | Detects spam patterns, excessive URLs, repeated phrases |
+| `.noGibberish(options?)` | Detects keyboard mash and random character sequences |
+| `.noExcessiveSymbols()` | Rejects inputs with too many special characters |
+| `.validate(value)` | Runs all checks and returns `ValidationResult` |
+
+---
+
+## Presets
+
+Ready-to-use validators for common fields. No configuration needed.
+
+```ts
 import {
   validateUsername,
   validateBio,
@@ -69,170 +142,276 @@ import {
   validateSearchQuery,
 } from '@marslanmustafa/input-shield';
 
-validateUsername('alice_dev');     // { isValid: true }
-validateUsername('f4ck3r');        // { isValid: false, reason: 'profanity', message: '...' }
-validateBio('Software engineer from Lahore'); // { isValid: true }
-validateShortText('test');         // { isValid: false, reason: 'low_effort', message: '...' }
+validateUsername('h4ck3r_dude');
+// { isValid: true }
+
+validateUsername('ааааааааа'); // Cyrillic homoglyphs
+// { isValid: false, reason: 'PROFANITY', message: '...' }
+
+validateBio('Buy cheap Viagra now! Click here for free money!!!');
+// { isValid: false, reason: 'SPAM', message: '...' }
+
+validateShortText('asdfasdfasdf');
+// { isValid: false, reason: 'GIBBERISH', message: '...' }
+
+validateLongText('Hello, this is a proper comment about the topic.');
+// { isValid: true }
+
+validateSearchQuery('!!!!!!!!!!!!');
+// { isValid: false, reason: 'EXCESSIVE_SYMBOLS', message: '...' }
 ```
+
+| Preset | Min | Max | Checks |
+|---|---|---|---|
+| `validateUsername` | 3 | 30 | profanity, gibberish (strict) |
+| `validateBio` | 10 | 300 | profanity, spam |
+| `validateShortText` | 2 | 100 | profanity, spam, gibberish |
+| `validateLongText` | 5 | 2000 | profanity, spam, gibberish |
+| `validateSearchQuery` | 1 | 100 | spam, symbols |
 
 ---
 
-## Integrations
+## Zod Integration
 
-- 📧 [Nodemailer — validate email content before sending](./NODEMAILER.md)
-## Fluent builder API
-
-```typescript
-import { createValidator } from '@marslanmustafa/input-shield';
-
-createValidator()
-  .field('Product Name')    // shown in error messages
-  .min(2).max(60)           // length bounds
-  .noProfanity()            // catches leet, homoglyphs, dots (f.u.c.k), fullwidth (ｆｕｃｋ)
-  .noSpam()                 // keywords + URLs (on raw text — not destroyed by normalization)
-  .noGibberish({            // sensitivity: 'loose' | 'normal' | 'strict'
-    sensitivity: 'normal',  // default — good for most fields
-  })
-  .noLowQuality()           // exact matches (test, asdf), excessive symbols, low letter ratio
-  .noRepeatedWords()        // catches "cat cat cat" (ignores stop words)
-  .allow('nginx', 'kubectl') // allowlist bypasses ALL checks (brand names, tech terms)
-  .custom(                  // custom rule — return true to BLOCK
-    t => t.startsWith('@'),
-    'custom',
-    'names cannot start with @'
-  )
-  .validate(text);          // → ValidationResult
-```
-
----
-
-## Zod integration
+Install Zod separately (`zod >= 3.0.0` is a peer dependency):
 
 ```bash
-# zod is a peer dependency — install it separately
-npm install zod @marslanmustafa/input-shield
+npm install zod
 ```
 
-```typescript
-import { z } from 'zod';
-import { shieldString, zodUsername, zodBio } from '@marslanmustafa/input-shield/zod';
+Import from the `/zod` subpath to keep Zod out of your main bundle if unused:
 
-// Preset schemas
+```ts
+import { z } from 'zod';
+import { shieldString, zodUsername, zodBio, zodShortText, zodLongText } from '@marslanmustafa/input-shield/zod';
+
+// Custom validator with full fluent chain
+const schema = z.object({
+  username: shieldString(v => v.field('Username').min(3).max(20).noProfanity().noGibberish()),
+  bio:      shieldString(v => v.field('Bio').min(10).max(300).noProfanity().noSpam()),
+});
+
+// Or use preset Zod helpers
 const schema = z.object({
   username: zodUsername(),
-  bio: zodBio(),
+  bio:      zodBio(),
+  title:    zodShortText('Title'),
+  body:     zodLongText('Body'),
 });
 
-// Custom configured schema
-const customSchema = z.object({
-  productName: shieldString(v =>
-    v.field('Product Name').min(2).max(60).noProfanity().noSpam()
-  ),
-});
-
-// Usage with react-hook-form + zod resolver — zero extra code
+// Works with React Hook Form, tRPC, Next.js API routes — anywhere Zod is used
+const parsed = schema.safeParse({ username: 'cl3an_user', bio: 'Hello world!' });
 ```
 
 ---
 
-## How the normalization pipeline works
+## Email / Nodemailer Integration
 
-This is the core innovation. Input is processed through 3 stages before any check runs:
+Import from the `/email` subpath:
 
+```ts
+import { validateMailContent, stripHtml } from '@marslanmustafa/input-shield/email';
 ```
-Input: "P.0.r.n" or "ｆｕｃｋ" or "аss" (Cyrillic а) or "f@ck"
-       │
-       ▼ Stage 1: Unicode NFKC
-         Collapses fullwidth, math-bold, ligatures, zero-width chars
-         "ｆｕｃｋ" → "fuck"  |  "𝐅𝐔𝐂𝐊" → "FUCK"
-       │
-       ▼ Stage 2: Separator stripping
-         Removes dots/dashes between single chars
-         "P.0.r.n" → "P0rn"  |  "f-u-c-k" → "fuck"
-       │
-       ▼ Stage 3: Homoglyph map (Cyrillic/Greek/Armenian → Latin)
-         "аss" (Cyrillic а U+0430) → "ass"
-         "ρorn" (Greek ρ) → "porn"
-       │
-       ▼ Stage 4: Leet-speak substitution
-         "0" → "o", "@" → "a", "$" → "s", "!" → "i" …
-         "f@ck" → "fack"  |  "@ss" → "ass"
-       │
-       ▼ Skeleton: "fuck" / "ass" / "porn"
-         Pattern matching runs here ───────────────► BLOCKED
-         Error messages reference ORIGINAL input ──► "f@ck"
+
+### Validate before sending
+
+```ts
+import nodemailer from 'nodemailer';
+import { validateMailContent } from '@marslanmustafa/input-shield/email';
+
+const mail = {
+  subject: 'Your order is confirmed',
+  html: '<p>Thanks for your purchase! <a href="https://yoursite.com">View order</a></p>',
+};
+
+const result = validateMailContent(mail);
+
+if (!result.isValid) {
+  // result.field  → 'subject' | 'text' | 'html'
+  // result.reason → 'PROFANITY' | 'SPAM' | ...
+  // result.message → human-readable string
+  throw new Error(`Mail rejected on field "${result.field}": ${result.message}`);
+}
+
+await transporter.sendMail({ to: '...', ...mail });
+```
+
+### What it catches in HTML emails
+
+```ts
+import { stripHtml } from '@marslanmustafa/input-shield/email';
+
+// Split-tag evasion
+stripHtml('<b>f</b><b>uck</b>');          // → "f uck" → skeleton → "fuck"
+
+// Decimal entity encoding
+stripHtml('&#102;&#117;&#99;&#107;');      // → "fuck"
+
+// Spam URLs in href
+stripHtml('<a href="https://spam.com">click here</a>'); // → includes URL text
+
+// CSS background trackers
+stripHtml('<div style="background:url(https://tracker.spam.com/px)">hi</div>');
+// → includes tracker URL for spam check
+```
+
+### Custom validator for email
+
+```ts
+import { createValidator } from '@marslanmustafa/input-shield';
+import { validateMailContent } from '@marslanmustafa/input-shield/email';
+
+const strictValidator = createValidator()
+  .field('Email content')
+  .min(1)
+  .max(10000)
+  .noProfanity()
+  .noSpam();
+
+const result = validateMailContent(
+  { subject: 'Hello', html: '<p>Content here</p>' },
+  strictValidator
+);
 ```
 
 ---
 
-## API Reference
+## Core Primitives (Tree-Shakeable)
 
-### `createValidator(): InputShieldValidator`
-Returns a new fluent builder instance.
+Use individual functions directly if you need fine-grained control:
 
-### Builder methods
+```ts
+import { toSkeleton, toStructural }              from '@marslanmustafa/input-shield';
+import { containsProfanity }                     from '@marslanmustafa/input-shield';
+import { containsSpam }                          from '@marslanmustafa/input-shield';
+import { isGibberish, hasRepeatingChars }        from '@marslanmustafa/input-shield';
+import { hasExcessiveSymbols, hasLowAlphabetRatio } from '@marslanmustafa/input-shield';
 
-| Method | Description |
-|---|---|
-| `.field(name)` | Set field label for error messages |
-| `.min(n)` | Minimum length. Default: 2 |
-| `.max(n)` | Maximum length. Default: 500 |
-| `.allow(...words)` | Allowlist — bypasses all checks |
-| `.noProfanity()` | Block profanity (all evasions caught) |
-| `.noSpam()` | Block spam keywords and URLs |
-| `.noGibberish(opts?)` | Block keyboard mash. `opts.sensitivity`: `'loose'` / `'normal'` / `'strict'` |
-| `.noLowQuality()` | Block exact low-effort matches, excessive symbols, low letter ratio |
-| `.noRepeatedWords()` | Block inputs with many repeated content words |
-| `.custom(fn, reason, msg)` | Custom rule. `fn(text) => true` to BLOCK |
-| `.validate(text)` | Run all checks. Returns `ValidationResult` |
-| `.validateOrThrow(text)` | Throws on invalid input. Useful in Zod `.superRefine()` |
+// Normalization
+toSkeleton('Fr33 m0ney!!!');   // → "free money"
+toStructural('ｆｕｃｋ');      // → "fuck"
 
-### `ValidationResult` (discriminated union)
+// Individual checks
+containsProfanity('h3ll yeah');  // → true
+containsSpam('Buy now! Click here! Free!!!'); // → true
+isGibberish('asdfghjkl');        // → true
+hasRepeatingChars('heeeeello');  // → true
+hasExcessiveSymbols('!!!###$$$'); // → true
+```
 
-```typescript
+---
+
+## TypeScript Types
+
+```ts
+import type {
+  ValidationResult,
+  FailReason,
+  GibberishSensitivity,
+  ValidationOptions,
+} from '@marslanmustafa/input-shield';
+
+// ValidationResult
 type ValidationResult =
   | { isValid: true }
   | { isValid: false; reason: FailReason; message: string };
 
+// FailReason
 type FailReason =
-  | 'empty' | 'too_short' | 'too_long'
-  | 'profanity' | 'spam'
-  | 'gibberish' | 'low_effort' | 'repeating_chars' | 'excessive_symbols'
-  | 'homoglyph_attack' | 'custom';
-```
+  | 'TOO_SHORT'
+  | 'TOO_LONG'
+  | 'PROFANITY'
+  | 'SPAM'
+  | 'GIBBERISH'
+  | 'EXCESSIVE_SYMBOLS'
+  | 'LOW_ALPHABET_RATIO'
+  | 'REPEATED_CONTENT'
+  | 'LOW_EFFORT';
 
-### Sensitivity scale
-
-| Sensitivity | Consonant run | Vowel ratio check | Best for |
-|---|---|---|---|
-| `'loose'` | 7+ in a row | ≥ 12 chars, < 5% vowels | Bio, non-English names |
-| `'normal'` | 6+ in a row | ≥ 8 chars, < 10% vowels | Most fields |
-| `'strict'` | 5+ in a row | ≥ 6 chars, < 15% vowels | Usernames, display names |
-
----
-
-## Tree-shaking
-
-Every module is independently importable:
-
-```typescript
-import { toSkeleton } from '@marslanmustafa/input-shield';           // normalization only
-import { containsProfanity } from '@marslanmustafa/input-shield';     // profanity only
-import { isGibberish } from '@marslanmustafa/input-shield';           // gibberish only
+// GibberishSensitivity
+type GibberishSensitivity = 'strict' | 'normal' | 'loose';
 ```
 
 ---
 
-## Bundle size
+## Real-World Examples
 
-| Import | Size (minzipped) |
-|---|---|
-| `createValidator` (full builder) | ~4 KB |
-| `containsProfanity` only | ~1.5 KB |
-| `@marslanmustafa/input-shield/zod` | +1 KB (zod external) |
+### Next.js API Route
+
+```ts
+import { validateUsername, validateBio } from '@marslanmustafa/input-shield';
+
+export async function POST(req: Request) {
+  const { username, bio } = await req.json();
+
+  const usernameResult = validateUsername(username);
+  if (!usernameResult.isValid) {
+    return Response.json({ error: usernameResult.message }, { status: 400 });
+  }
+
+  const bioResult = validateBio(bio);
+  if (!bioResult.isValid) {
+    return Response.json({ error: bioResult.message }, { status: 400 });
+  }
+
+  // safe to write to DB
+}
+```
+
+### tRPC Procedure
+
+```ts
+import { z } from 'zod';
+import { zodUsername, zodBio } from '@marslanmustafa/input-shield/zod';
+
+export const updateProfile = publicProcedure
+  .input(z.object({
+    username: zodUsername(),
+    bio: zodBio(),
+  }))
+  .mutation(async ({ input }) => {
+    // input is fully validated and typed
+    await db.user.update({ data: input });
+  });
+```
+
+### Express Middleware
+
+```ts
+import { createValidator } from '@marslanmustafa/input-shield';
+
+const commentValidator = createValidator()
+  .field('Comment')
+  .min(5)
+  .max(500)
+  .noProfanity()
+  .noSpam()
+  .noGibberish();
+
+app.post('/comments', (req, res) => {
+  const result = commentValidator.validate(req.body.comment);
+  if (!result.isValid) {
+    return res.status(400).json({ error: result.message, reason: result.reason });
+  }
+  // save comment
+});
+```
+
+---
+
+## Contributing
+
+Issues and PRs are welcome. Please open an issue first for major changes.
+
+```bash
+git clone https://github.com/marslanmustafa/input-shield
+cd input-shield
+npm install
+npm run test:watch
+```
 
 ---
 
 ## License
 
-MIT © [Muhammad Arslan](https://marslanmustafa.com)
+MIT © [Muhammad Arslan Mustafa](https://marslanmustafa.com)

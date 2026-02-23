@@ -19,21 +19,30 @@ import { toSkeleton } from './normalize.js';
 
 // Each entry: [pattern, label] — label used for future i18n / logging
 const PROFANITY_PATTERNS: RegExp[] = [
-  // fuck — also matches 'fack' because leet '4' → 'a', so we allow u OR a in slot 2
-  /\bf+[ua]+c+k+(e[dr]|ing|s|er)?\b/i,
-  /\bs+h+i+t+(s|te[dr]|ting)?\b/i,
-  /\bb+i+t+c+h+(e[sd]|ing)?\b/i,
-  // ass — use (^|\s|[^a-z]) instead of \b so it catches "@ss" → "ass" at start of string
-  /(?:^|(?<=[^a-z]))a+s{2,}(h+o+l+e+s?|e[sd]|ing)?\b/i,
-  /\bc+u+n+t+s?\b/i,
-  // dick — exclude as a proper first name before a capitalized surname
-  /\bd+i+c+k+(s|ed|ing)?\b(?! [A-Z])/i,
-  /\bp+r+i+c+k+s?\b/i,
-  /\bb+a+s+t+a+r+d+s?\b/i,
-  /\bw+h+o+r+e+s?\b/i,
-  /\bf+a+g+(g+o+t+s?)?\b/i,
-  /\bn+i+g+(g+e+r+s?|ga+s?)?\b/i,
-  /\bfrick\b/i,
+  // fuck — no boundaries needed, no legitimate English words contain 'fuck'
+  /f+[ua]+c+k+/i,
+  // shit — left boundary to prevent 'mishit'
+  /(?<![a-z])s+h+i+t+/i,
+  // bitch — no boundaries needed
+  /b+i+t+c+h+/i,
+  // ass — strictly bounded to avoid 'assassin', 'classic', 'bass'
+  /(?<![a-z])a+s{2,}(h+o+l+e+s?|e[sd]|ing)?(?![a-z])/i,
+  // cunt — left boundary for 'scunthorpe'
+  /(?<![a-z])c+u+n+t+/i,
+  // dick — strictly bounded to avoid 'dickens', 'medick'
+  /(?<![a-z])d+i+c+k+(s|ed|ing)?(?![a-z])(?! [A-Z])/i,
+  // prick — strictly bounded to avoid 'prickly'
+  /(?<![a-z])p+r+i+c+k+s?(?![a-z])/i,
+  // bastard — no boundaries needed
+  /b+a+s+t+a+r+d+/i,
+  // whore — left boundary
+  /(?<![a-z])w+h+o+r+e+/i,
+  // fag / faggot — left boundary, right boundary for 'fag' to avoid 'fagus'
+  /(?<![a-z])f+a+g+(g+o+t+s?)?(?![a-z])/i,
+  // nigger / nigga — left boundary for 'snigger'
+  /(?<![a-z])n+i+g+(g+e+r+s?|ga+s?)/i,
+  // frick — strictly bounded
+  /(?<![a-z])frick(?![a-z])/i,
 ];
 
 /**
