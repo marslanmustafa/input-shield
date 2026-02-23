@@ -1,0 +1,105 @@
+{
+  "name": "@marslanmustafa/input-shield",
+  "version": "0.1.0",
+  "description": "One install. No config. Clean inputs. Profanity, spam, gibberish, and homoglyph detection in a single TypeScript-native zero-dependency package.",
+  "author": {
+    "name": "Muhammad Arslan Mustafa",
+    "email": "marslanmustafa391@gmail.com",
+    "url": "https://marslanmustafa.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marslanmustafa/input-shield"
+  },
+  "homepage": "https://github.com/marslanmustafa/input-shield#readme",
+  "bugs": {
+    "url": "https://github.com/marslanmustafa/input-shield/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./zod": {
+      "import": "./dist/zod.mjs",
+      "require": "./dist/zod.cjs",
+      "types": "./dist/zod.d.ts"
+    },
+    "./email": {
+      "import": "./dist/email.mjs",
+      "require": "./dist/email.cjs",
+      "types": "./dist/email.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "NODEMAILER.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "profanity",
+    "profanity-filter",
+    "spam-detection",
+    "gibberish",
+    "input-validation",
+    "text-validation",
+    "content-moderation",
+    "leet-speak",
+    "homoglyph",
+    "unicode",
+    "typescript",
+    "zero-dependency",
+    "form-validation",
+    "zod"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "size": "size-limit",
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "release:patch": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
+  },
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^11.0.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "zod": "^3.22.0"
+  },
+  "peerDependencies": {
+    "zod": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "size-limit": [
+    {
+      "path": "./dist/index.mjs",
+      "limit": "8 KB"
+    },
+    {
+      "path": "./dist/zod.mjs",
+      "limit": "2 KB"
+    }
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
