@@ -120,7 +120,7 @@ export function validateMailContent(
     .min(1)
     .max(50000)
     .noProfanity()
-    .noSpam();
+    .noSpam({ strictness: 'normal' });
 
   const fields: Array<{ key: 'subject' | 'text' | 'html'; value: string }> = [];
 

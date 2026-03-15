@@ -115,6 +115,12 @@ export default router;
 
 ---
 
+### How it works
+
+`validateMailContent` uses a default validator configured with `noProfanity()` and `noSpam({ strictness: 'normal' })`. While the global default for `.noSpam()` is `low` (keywords only), email validation defaults to `normal` to protect against malicious URLs.
+
+---
+
 ### What gets blocked before it reaches Nodemailer
 
 | Input | Reason blocked |

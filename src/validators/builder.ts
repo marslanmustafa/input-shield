@@ -33,7 +33,7 @@ import {
   hasRepeatedContentWords,
   isLowEffortExact,
 } from '../core/structure.js';
-import type { ValidationResult, FailReason, GibberishSensitivity } from '../types.js';
+import type { ValidationResult, FailReason, GibberishSensitivity, SpamStrictness } from '../types.js';
 
 // ─── Internal check type ──────────────────────────────────────────────────────
 type CheckFn = (raw: string, skeleton: string) => CheckResult | null;
@@ -92,12 +92,15 @@ export class InputShieldValidator {
 
   /**
    * Block spam keywords and URLs.
-   * Note: URL detection uses the raw string internally (not the skeleton),
-   * so you don't need to worry about URLs being missed.
+   *
+   * @param options.strictness
+   *   'low'    — default. Only blocks keywords (e.g. "viagra"). Allows links.
+   *   'normal' — also blocks URLs, domains, and IP addresses.
    */
-  noSpam(): this {
+  noSpam(options: { strictness?: SpamStrictness } = {}): this {
+    const strictness = options.strictness ?? 'low';
     const spamFn: CheckFn = (raw) =>
-      containsSpam(raw)
+      containsSpam(raw, { strictness })
         ? { reason: 'spam', message: 'appears to contain spam or promotional content.' }
         : null;
     this._spamCheck = spamFn;

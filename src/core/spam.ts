@@ -14,6 +14,7 @@
  */
 
 import { toSkeleton } from './normalize.js';
+import type { SpamStrictness } from '../types.js';
 
 // ─── Keyword spam — run on skeleton ──────────────────────────────────────────
 // IMPORTANT: skeleton strips spaces to single space, so multi-word patterns
@@ -47,8 +48,12 @@ const URL_PATTERNS: RegExp[] = [
 /**
  * Returns true if text contains spam keywords (checked on skeleton)
  * or URLs/domains (checked on NFKC-only normalized text).
+ *
+ * @param text - The text to check
+ * @param options.strictness - 'low' (keywords only) or 'normal' (keywords + links)
  */
-export function containsSpam(text: string): boolean {
+export function containsSpam(text: string, options: { strictness?: SpamStrictness } = {}): boolean {
+  const strictness = options.strictness ?? 'normal';
   const skeleton = toSkeleton(text);
   const nfkc = text.normalize('NFKC'); // preserves punctuation — ! stays !, not 'i'
 
@@ -56,7 +61,11 @@ export function containsSpam(text: string): boolean {
   // doesn't get leet-converted and break \b word boundaries.
   // Leet-evaded keywords (v!agra) are caught by also testing the skeleton.
   if (KEYWORD_PATTERNS.some(p => p.test(nfkc) || p.test(skeleton))) return true;
-  if (URL_PATTERNS.some(p => p.test(nfkc))) return true;
+
+  // URL detection only in 'normal' strictness
+  if (strictness === 'normal') {
+    if (URL_PATTERNS.some(p => p.test(nfkc))) return true;
+  }
 
   return false;
 }

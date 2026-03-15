@@ -122,10 +122,27 @@ const result = bio.validate('Buy cheap pills now!!! Click here!!!');
 | `.min(n)` | Minimum character length |
 | `.max(n)` | Maximum character length |
 | `.noProfanity()` | Detects profanity including leet-speak and homoglyphs |
-| `.noSpam()` | Detects spam patterns, excessive URLs, repeated phrases |
+| `.noSpam(options?)` | Detects keywords (low) or keywords + links (normal). Default: `low`. |
 | `.noGibberish(options?)` | Detects keyboard mash and random character sequences |
 | `.noExcessiveSymbols()` | Rejects inputs with too many special characters |
 | `.validate(value)` | Runs all checks and returns `ValidationResult` |
+
+---
+
+## Spam Detection
+
+The `.noSpam()` check supports two strictness levels:
+
+- **`low` (Default)**: Only detects spam keywords (e.g., "viagra", "free money", "buy now"). This is ideal for bios or user names where you might want to allow links but block promotional language.
+- **`normal`**: Detects keywords AND common URL/domain/IP patterns. 
+
+```ts
+// Only block keywords
+createValidator().noSpam(); // internal default: { strictness: 'low' }
+
+// Block keywords AND links
+createValidator().noSpam({ strictness: 'normal' });
+```
 
 ---
 
@@ -327,6 +344,9 @@ type FailReason =
   | 'LOW_ALPHABET_RATIO'
   | 'REPEATED_CONTENT'
   | 'LOW_EFFORT';
+
+// SpamStrictness
+type SpamStrictness = 'low' | 'normal';
 
 // GibberishSensitivity
 type GibberishSensitivity = 'strict' | 'normal' | 'loose';

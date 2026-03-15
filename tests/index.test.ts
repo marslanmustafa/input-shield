@@ -138,7 +138,7 @@ describe('containsProfanity', () => {
 describe('containsSpam', () => {
   it('catches "viagra"', () => expect(containsSpam('buy viagra now')).toBe(true));
   it('catches "free money"', () => expect(containsSpam('win free money!')).toBe(true));
-  it('catches full URLs', () => expect(containsSpam('visit https://spam.example.com now')).toBe(true));
+  it('catches full URLs (default strictness: normal)', () => expect(containsSpam('visit https://spam.example.com now')).toBe(true));
   it('catches bare domains', () => expect(containsSpam('go to spam-site.com for deals')).toBe(true));
   it('catches IP addresses', () => expect(containsSpam('connect to 192.168.1.1')).toBe(true));
   it('catches lorem ipsum', () => expect(containsSpam('Lorem ipsum dolor sit amet')).toBe(true));
@@ -147,6 +147,17 @@ describe('containsSpam', () => {
   it('does NOT flag normal text', () => expect(containsSpam('Great product, highly recommend')).toBe(false));
   it('does NOT flag version numbers as domains', () => {
     expect(containsSpam('requires node v18.0 or later')).toBe(false);
+  });
+
+  describe('strictness levels', () => {
+    it('low: catches keywords but allows URLs', () => {
+      expect(containsSpam('buy viagra', { strictness: 'low' })).toBe(true);
+      expect(containsSpam('visit https://google.com', { strictness: 'low' })).toBe(false);
+    });
+    it('normal: catches keywords AND URLs', () => {
+      expect(containsSpam('buy viagra', { strictness: 'normal' })).toBe(true);
+      expect(containsSpam('visit https://google.com', { strictness: 'normal' })).toBe(true);
+    });
   });
 });
 
@@ -274,8 +285,21 @@ describe('createValidator() — fluent builder', () => {
     if (!r.isValid) expect(r.reason).toBe('gibberish');
   });
 
-  it('fails spam URL', () => {
-    const r = v.validate('check https://spam.com for deals');
+  it('allows spam URL by default (low strictness)', () => {
+    const lowV = createValidator().noSpam();
+    const r = lowV.validate('check https://spam.com for deals');
+    expect(r.isValid).toBe(true);
+  });
+
+  it('fails spam URL with normal strictness', () => {
+    const vn = createValidator().noSpam({ strictness: 'normal' });
+    const r = vn.validate('check https://spam.com for deals');
+    expect(r.isValid).toBe(false);
+    if (!r.isValid) expect(r.reason).toBe('spam');
+  });
+
+  it('fails spam keywords even in low strictness', () => {
+    const r = v.validate('buy viagra now');
     expect(r.isValid).toBe(false);
     if (!r.isValid) expect(r.reason).toBe('spam');
   });
@@ -355,8 +379,8 @@ describe('presets', () => {
     it('passes single-word queries', () => {
       expect(validateSearchQuery('typescript').isValid).toBe(true);
     });
-    it('fails spam URLs in query', () => {
-      expect(validateSearchQuery('buy at https://spam.com').isValid).toBe(false);
+    it('passes spam URLs in query by default (low strictness)', () => {
+      expect(validateSearchQuery('buy at https://spam.com').isValid).toBe(true);
     });
   });
 

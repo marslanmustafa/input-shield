@@ -26,6 +26,11 @@ export type GibberishSensitivity = 'loose' | 'normal' | 'strict';
 //   normal → consonant clusters + low vowel ratio on long words
 //   strict → also flags suspiciously short vowel ratio on short words
 
+// ─── Spam strictness ──────────────────────────────────────────────────────────
+export type SpamStrictness = 'low' | 'normal';
+//   low    → only detects keywords (no link detection). Best for bios/messages.
+//   normal → detects keywords AND links/URLs.
+
 // ─── Builder / validator options ─────────────────────────────────────────────
 export interface ValidationOptions {
   /** Display name used in error messages. Default: "Input" */
@@ -40,6 +45,8 @@ export interface ValidationOptions {
   skipGibberishCheck?: boolean;
   /** Skip repeated-word detection. Useful for long-form natural language. */
   skipRepeatWordCheck?: boolean;
+  /** Controls how aggressively spam is flagged. Default: "low" (no links) */
+  spamStrictness?: SpamStrictness;
   /** Extra words/phrases to block (exact, case-insensitive). */
   customBlocklist?: string[];
   /** Strings always allowed, bypassing all checks (e.g. brand names, acronyms). */
